@@ -14,6 +14,7 @@ Re-run after adding or renaming an agent. Because the install uses symlinks, **e
 
 | Agent | Job | Touches code? |
 |---|---|---|
+| [chief](agents/chief.md) | Orchestrates the roster for multi-step work; returns one synthesized report | No — coordinates + verifies |
 | [code-reviewer](agents/code-reviewer.md) | Reviews diffs for bugs, edge cases, maintainability | No — reports only |
 | [debugger](agents/debugger.md) | Reproduces bugs, finds root cause with evidence, applies minimal fix | Yes |
 | [test-writer](agents/test-writer.md) | Writes behavior-focused tests in the project's existing framework, runs them | Yes |
@@ -49,6 +50,14 @@ Each subagent runs in its **own context window** — it doesn't see your convers
 **Something's broken:** go straight to **debugger**. Give it the exact error output and how to reproduce. It's built to reproduce first and refuse to guess.
 
 **Before a release / after touching auth, uploads, SQL, or secrets:** run **security-auditor** over the changed area. Also worth one full pass on any project going public.
+
+**Whole pipelines: send the chief.** For work spanning several specialties, delegate once instead of driving each stage yourself:
+
+> Use the **chief** subagent: add CSV export to the order-system reports page — plan it, implement, test, review, and update the docs.
+
+The chief scouts the repo, briefs each specialist with self-contained instructions, runs independent stages in parallel (review ∥ security ∥ docs), routes findings back for fixes, verifies with fresh test runs, and returns a single synthesized report. Requires Claude Code ≥ 2.1.172 (subagent nesting; chief spawns the others up to 5 levels deep).
+
+Chief vs. driving agents yourself: the chief keeps your main conversation clean (one report instead of six), but you give up mid-pipeline steering. Use the chief for well-understood work you'd happily review at the end; drive agents individually when you expect to make judgment calls between stages.
 
 **Rules of thumb**
 
