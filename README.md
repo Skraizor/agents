@@ -57,6 +57,8 @@ Each subagent runs in its **own context window** — it doesn't see your convers
 
 The chief scouts the repo, briefs each specialist with self-contained instructions, runs independent stages in parallel (review ∥ security ∥ docs), routes findings back for fixes, verifies with fresh test runs, and returns a single synthesized report. Requires Claude Code ≥ 2.1.172 (subagent nesting; chief spawns the others up to 5 levels deep).
 
+The chief itself runs on Fable (`model: fable` in its frontmatter — the top-tier model, where coordination judgment pays off) and assigns models per dispatch via the Agent tool's `model` parameter: haiku for mechanical recon, sonnet for implementation and routine reviews, opus/fable for architecture and security calls. Model resolution order: env var `CLAUDE_CODE_SUBAGENT_MODEL` > per-call parameter > agent frontmatter > main conversation's model; unavailable models fall back down the chain. Note Fable is billed at the highest rate — if a pipeline run is cost-sensitive, override with "use the chief subagent on sonnet".
+
 Chief vs. driving agents yourself: the chief keeps your main conversation clean (one report instead of six), but you give up mid-pipeline steering. Use the chief for well-understood work you'd happily review at the end; drive agents individually when you expect to make judgment calls between stages.
 
 **Rules of thumb**
