@@ -1,19 +1,17 @@
 #!/usr/bin/env bash
-# Symlinks every Codex agent in ./codex-agents into $CODEX_HOME/agents
-# (default: ~/.codex/agents). Codex auto-discovers TOML role files there.
+# Symlinks every Cursor agent in ./cursor-agents into ~/.cursor/agents.
 # Idempotent — edits to files in this repo apply immediately through symlinks.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SRC_DIR="$REPO_DIR/codex-agents"
-CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
-DEST_DIR="$CODEX_DIR/agents"
+SRC_DIR="$REPO_DIR/cursor-agents"
+DEST_DIR="$HOME/.cursor/agents"
 
 mkdir -p "$DEST_DIR"
 shopt -s nullglob
 
 installed=0
-for src in "$SRC_DIR"/*.toml; do
+for src in "$SRC_DIR"/*.md; do
   name="$(basename "$src")"
   dest="$DEST_DIR/$name"
   if [[ -e "$dest" && ! -L "$dest" ]]; then
@@ -26,7 +24,7 @@ for src in "$SRC_DIR"/*.toml; do
 done
 
 # Clean only dangling links that used to point into this repository.
-for link in "$DEST_DIR"/*.toml; do
+for link in "$DEST_DIR"/*.md; do
   if [[ -L "$link" && ! -e "$link" ]]; then
     target="$(readlink "$link")"
     if [[ "$target" == "$SRC_DIR/"* ]]; then
@@ -37,4 +35,4 @@ for link in "$DEST_DIR"/*.toml; do
 done
 
 echo
-echo "$installed Codex agent(s) installed. Start a new Codex session to refresh the agent list."
+echo "$installed Cursor agent(s) installed. Start a new Cursor conversation to refresh the agent list."
