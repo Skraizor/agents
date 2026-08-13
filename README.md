@@ -1,4 +1,4 @@
-# My Agentic Army
+# Development Agents
 
 Custom development subagents for [Claude Code](https://code.claude.com/docs/en/sub-agents), [Codex](https://developers.openai.com/codex/), and [Cursor](https://cursor.com/docs/subagents). The same roster is provided in each tool's native format: Markdown for Claude Code and Cursor, and TOML for Codex.
 
