@@ -16,19 +16,22 @@ permissions:
     resource: "*"
     effect: deny
   - action: edit
-    resource: "**/*.md"
+    resource: "*.md"
     effect: allow
   - action: edit
-    resource: "**/*.mdx"
+    resource: "*.mdx"
     effect: allow
   - action: edit
-    resource: "**/*.rst"
+    resource: "*.rst"
     effect: allow
   - action: edit
-    resource: "**/*.adoc"
+    resource: "*.adoc"
     effect: allow
   - action: edit
-    resource: "**/docs/**"
+    resource: "docs/*"
+    effect: allow
+  - action: edit
+    resource: "*/docs/*"
     effect: allow
   - action: edit
     resource: "README*"
