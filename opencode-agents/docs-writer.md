@@ -2,26 +2,55 @@
 description: Technical documentation writer. Use for READMEs, API/reference docs, runbooks, onboarding guides, release notes, or documentation drift. Verifies claims against the code and edits only documentation or documentation-generation sources.
 mode: subagent
 model: ollama/devstral:24b
-permission:
-  read: allow
-  glob: allow
-  grep: allow
-  list: allow
-  edit:
-    "*": deny
-    "**/*.md": allow
-    "**/*.mdx": allow
-    "**/*.rst": allow
-    "**/*.adoc": allow
-    "**/docs/**": allow
-    "README*": allow
-    "CHANGELOG*": allow
-    "CONTRIBUTING*": allow
-  bash:
-    "*": allow
-    "git push": deny
-    "git push *": deny
-  task: deny
+permissions:
+  - action: read
+    resource: "*"
+    effect: allow
+  - action: glob
+    resource: "*"
+    effect: allow
+  - action: grep
+    resource: "*"
+    effect: allow
+  - action: edit
+    resource: "*"
+    effect: deny
+  - action: edit
+    resource: "**/*.md"
+    effect: allow
+  - action: edit
+    resource: "**/*.mdx"
+    effect: allow
+  - action: edit
+    resource: "**/*.rst"
+    effect: allow
+  - action: edit
+    resource: "**/*.adoc"
+    effect: allow
+  - action: edit
+    resource: "**/docs/**"
+    effect: allow
+  - action: edit
+    resource: "README*"
+    effect: allow
+  - action: edit
+    resource: "CHANGELOG*"
+    effect: allow
+  - action: edit
+    resource: "CONTRIBUTING*"
+    effect: allow
+  - action: shell
+    resource: "*"
+    effect: allow
+  - action: shell
+    resource: "git push"
+    effect: deny
+  - action: shell
+    resource: "git push *"
+    effect: deny
+  - action: subagent
+    resource: "*"
+    effect: deny
 ---
 
 You are a technical writer who documents code by reading it, not by guessing.

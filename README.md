@@ -125,7 +125,7 @@ and environment context may also be loaded by the host.
 Tips learned the hard way:
 
 - **`description` is routing metadata.** Make it a concrete matching rule with positive and negative scope. Claude Code, Cursor, and OpenCode use it for automatic delegation; Codex uses it as role guidance when spawning.
-- **Restrict permissions and tools.** Claude read-only roles use `permissionMode: plan`; Codex uses `sandbox_mode = "read-only"`; Cursor uses `readonly: true`; OpenCode uses `permission` allow/ask/deny rules (`edit: deny`, `task: deny`, `git push *` denials). Tool allowlists narrow each role further. A more-permissive live parent/session override can take precedence in some hosts, so keep the prompt-level no-edit rule too.
+- **Restrict permissions and tools.** Claude read-only roles use `permissionMode: plan`; Codex uses `sandbox_mode = "read-only"`; Cursor uses `readonly: true`; OpenCode uses a V2 `permissions` array of `action` / `resource` / `effect` rules (`edit` deny, `subagent` deny, `git push *` denials). Tool allowlists narrow each role further. A more-permissive live parent/session override can take precedence in some hosts, so keep the prompt-level no-edit rule too.
 - **Define ownership and evidence.** Writable roles need a file boundary and preservation rule; reviewers need a reproducible failure scenario and validation gaps.
 - **Use a stable output contract.** This makes handoffs and final synthesis reliable.
 - **Keep prompts focused.** Add a prohibition only when it prevents a concrete failure mode; duplicated or generic instructions dilute the role.
@@ -159,26 +159,35 @@ The subagent's complete prompt.
 
 Use `readonly: true` for reviewers and planners, and `readonly: false` for agents that edit code or documentation. Cursor supports project-local agents in `.cursor/agents/`; this repo installs the same definitions globally in `~/.cursor/agents/`.
 
-OpenCode agents are Markdown files with YAML frontmatter. The filename (minus `.md`) is the agent id. `permission` uses OpenCode's current allow/ask/deny rules; `mode` is `primary` for the session harness and `subagent` for specialists:
+OpenCode agents are Markdown files with YAML frontmatter. The filename (minus `.md`) is the agent id. `permissions` is an ordered array of `{action, resource, effect}` rules (last match wins); `mode` is `primary` for the session harness and `subagent` for specialists:
 
 ```markdown
 ---
 description: What it does and when OpenCode should use it.
 mode: subagent
 model: ollama/devstral:24b
-permission:
-  edit: allow
-  bash:
-    "*": allow
-    "git push": deny
-    "git push *": deny
-  task: deny
+permissions:
+  - action: edit
+    resource: "*"
+    effect: allow
+  - action: shell
+    resource: "*"
+    effect: allow
+  - action: shell
+    resource: "git push"
+    effect: deny
+  - action: shell
+    resource: "git push *"
+    effect: deny
+  - action: subagent
+    resource: "*"
+    effect: deny
 ---
 
 The agent's complete role prompt.
 ```
 
-Use `mode: primary` only for `chief`. Specialists stay `mode: subagent` so they cannot become a competing session harness. Prefer `permission` over the deprecated `tools` boolean map. This repo installs OpenCode definitions globally in `~/.config/opencode/agents/`; OpenCode also discovers project-local files in `.opencode/agents/`.
+Use `mode: primary` only for `chief`. Specialists stay `mode: subagent` so they cannot become a competing session harness. Prefer native V2 `permissions` over the V1 `permission` object (`bash`/`task`/`list`) and the deprecated `tools` boolean map. This repo installs OpenCode definitions globally in `~/.config/opencode/agents/`; OpenCode also discovers project-local files in `.opencode/agents/`.
 
 ## OpenCode
 
