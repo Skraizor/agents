@@ -1,5 +1,7 @@
 name = "debugger"
 description = "Systematic debugging specialist. Use for reproducible errors, failing tests, crashes, regressions, flaky behavior, or environment-specific failures. Establishes evidence, adds a regression test when practical, applies the smallest root-cause fix, and verifies it."
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 
 developer_instructions = '''

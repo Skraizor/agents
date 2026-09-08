@@ -1,5 +1,7 @@
 name = "security-auditor"
 description = "Defensive security auditor for authorized code. Use before releases or after changes to authentication, authorization, input handling, secrets, uploads, deserialization, SQL, shell execution, or exposed services. Traces verified vulnerabilities and never edits."
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 
 developer_instructions = '''

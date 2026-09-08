@@ -47,9 +47,34 @@ On Claude Code, Codex, and Cursor, the `chief` is itself a subagent and must be 
 | [security-auditor](agents/security-auditor.md) | Defensive vulnerability audit with severity + remediation | No — reports only |
 | [architect](agents/architect.md) | Designs features before coding: approaches, trade-offs, step-by-step plan | No — plan is the deliverable |
 
+Codex additionally includes [explorer](codex-agents/explorer.toml) for repository reconnaissance, [mechanical-worker](codex-agents/mechanical-worker.toml) for low-judgment repetitive edits, and [critical-architect](codex-agents/critical-architect.toml) for rare consequential cross-system decisions. Its [test-writer](codex-agents/test-writer.toml) also acts as an independent coverage reviewer and risk-based test designer.
+
+For Codex, the roster is grouped by intended frequency:
+
+- **Core delivery:** `chief`, `explorer`, `architect`, `implementer`, `debugger`, `test-writer`, `code-reviewer`
+- **Conditional specialists:** `mechanical-worker`, `security-auditor`
+- **Documentation specialist:** `docs-writer`
+- **Rare escalation:** `critical-architect`
+
+| Codex agent | Model | Reasoning |
+|---|---|---|
+| `chief` | `gpt-5.6-sol` | Medium |
+| `explorer` | `gpt-5.6-terra` | Low |
+| `architect` | `gpt-5.6-sol` | High |
+| `implementer` | `gpt-5.6-sol` | Medium |
+| `debugger` | `gpt-5.6-sol` | High |
+| `test-writer` | `gpt-5.6-terra` | Medium |
+| `code-reviewer` | `gpt-5.6-sol` | High |
+| `mechanical-worker` | `gpt-5.6-luna` | Low |
+| `security-auditor` | `gpt-5.6-sol` | High |
+| `docs-writer` | `gpt-5.6-terra` | Medium |
+| `critical-architect` | `gpt-6-astra` | Medium |
+
 The read-only split is deliberate: reviewers and auditors that can't edit can't "helpfully" change the thing they're judging.
 
 ## How invocation works
+
+See [Example agent prompts](PROMPTS.md) for copy-ready briefs covering individual specialists, critical architecture, and full-team workflows.
 
 Invocation differs slightly by host:
 
@@ -71,7 +96,7 @@ Each subagent runs in its **own context window**. Give it a self-contained brief
 ```
 1. architect        → only if the change has unresolved design decisions
 2. implementer      → implement the agreed behavior in an explicit file scope
-3. test-writer      → add contract-based coverage without changing production code
+3. test-writer      → independently review coverage, then add contract-based tests where authorized
 4. code-reviewer ∥ security-auditor → independent read-only review as risk warrants
 5. implementer      → remediate confirmed findings, then re-run verification
 6. docs-writer      → update docs after behavior is stable
@@ -89,7 +114,7 @@ Each subagent runs in its **own context window**. Give it a self-contained brief
 
 The chief scouts the repo, turns the request into acceptance criteria, assigns non-overlapping file ownership, runs independent read-only reviews in parallel, routes confirmed findings back for fixes, verifies the final state, updates docs last, and returns a single synthesized report.
 
-Claude Code, Codex, and Cursor definitions inherit the parent model by default. This keeps those ports portable across accounts and lets the host choose a suitable model/reasoning balance; pin models there only after measuring a representative task suite. OpenCode is the exception: it pins a frontier model on orchestration/review roles and a local Ollama model on implementation roles (see [OpenCode](#opencode)).
+All Codex roles pin a model and reasoning effort. Coordination, implementation, debugging, review, security, and architecture use `gpt-5.6-sol`; exploration, test engineering, and documentation use `gpt-5.6-terra`; repetitive mechanical work uses `gpt-5.6-luna`; and rare critical architecture uses `gpt-6-astra`. Claude and Cursor definitions continue to inherit their host model by default.
 
 Chief vs. driving agents yourself: the chief keeps your main conversation clean (one report instead of six), but you give up mid-pipeline steering. Use the chief for well-understood work you'd happily review at the end; drive agents individually when you expect to make judgment calls between stages.
 
@@ -135,6 +160,8 @@ Codex agents are TOML role files:
 ```toml
 name = "code-reviewer"
 description = "What it does and when Codex should use it."
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 
 developer_instructions = '''

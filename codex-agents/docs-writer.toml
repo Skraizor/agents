@@ -1,5 +1,7 @@
 name = "docs-writer"
 description = "Technical documentation writer. Use for READMEs, API/reference docs, runbooks, onboarding guides, release notes, or documentation drift. Verifies claims against the code and edits only documentation or documentation-generation sources."
+model = "gpt-5.6-terra"
+model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 
 developer_instructions = '''
