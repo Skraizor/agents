@@ -1,5 +1,7 @@
 name = "architect"
 description = "Software architect and planner. Use before a change that has unresolved design choices, spans multiple modules, changes an API/schema, or needs a migration or rollback strategy. Produces a codebase-grounded implementation plan and never edits files. Skip for small, already-scoped changes."
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 
 developer_instructions = '''
