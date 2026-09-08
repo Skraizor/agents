@@ -2,17 +2,31 @@
 description: Systematic debugging specialist. Use for reproducible errors, failing tests, crashes, regressions, flaky behavior, or environment-specific failures. Establishes evidence, adds a regression test when practical, applies the smallest root-cause fix, and verifies it.
 mode: subagent
 model: ollama/devstral:24b
-permission:
-  read: allow
-  glob: allow
-  grep: allow
-  list: allow
-  edit: allow
-  bash:
-    "*": allow
-    "git push": deny
-    "git push *": deny
-  task: deny
+permissions:
+  - action: read
+    resource: "*"
+    effect: allow
+  - action: glob
+    resource: "*"
+    effect: allow
+  - action: grep
+    resource: "*"
+    effect: allow
+  - action: edit
+    resource: "*"
+    effect: allow
+  - action: shell
+    resource: "*"
+    effect: allow
+  - action: shell
+    resource: "git push"
+    effect: deny
+  - action: shell
+    resource: "git push *"
+    effect: deny
+  - action: subagent
+    resource: "*"
+    effect: deny
 ---
 
 You are a debugging specialist. Build an evidence-backed diagnosis before changing production code; do not make speculative edits.

@@ -2,37 +2,91 @@
 description: Defensive security auditor for authorized code. Use proactively before releases or after changes to authentication, authorization, input handling, secrets, uploads, deserialization, SQL, shell execution, or exposed services. Traces verified vulnerabilities and never edits.
 mode: subagent
 model: openai/gpt-5.6-sol
-permission:
-  read: allow
-  glob: allow
-  grep: allow
-  list: allow
-  edit: deny
-  bash:
-    "*": deny
-    "git status*": allow
-    "git diff*": allow
-    "git log*": allow
-    "git show*": allow
-    "git rev-parse*": allow
-    "git ls-files*": allow
-    "ls*": allow
-    "find *": allow
-    "rg *": allow
-    "grep *": allow
-    "cat *": allow
-    "head *": allow
-    "tail *": allow
-    "npm audit*": allow
-    "pnpm audit*": allow
-    "yarn npm audit*": allow
-    "pip-audit*": allow
-    "cargo audit*": allow
-    "govulncheck*": allow
-    "bundler-audit*": allow
-    "git push": deny
-    "git push *": deny
-  task: deny
+permissions:
+  - action: read
+    resource: "*"
+    effect: allow
+  - action: glob
+    resource: "*"
+    effect: allow
+  - action: grep
+    resource: "*"
+    effect: allow
+  - action: edit
+    resource: "*"
+    effect: deny
+  - action: shell
+    resource: "*"
+    effect: deny
+  - action: shell
+    resource: "git status *"
+    effect: allow
+  - action: shell
+    resource: "git diff *"
+    effect: allow
+  - action: shell
+    resource: "git log *"
+    effect: allow
+  - action: shell
+    resource: "git show *"
+    effect: allow
+  - action: shell
+    resource: "git rev-parse *"
+    effect: allow
+  - action: shell
+    resource: "git ls-files *"
+    effect: allow
+  - action: shell
+    resource: "ls *"
+    effect: allow
+  - action: shell
+    resource: "find *"
+    effect: allow
+  - action: shell
+    resource: "rg *"
+    effect: allow
+  - action: shell
+    resource: "grep *"
+    effect: allow
+  - action: shell
+    resource: "cat *"
+    effect: allow
+  - action: shell
+    resource: "head *"
+    effect: allow
+  - action: shell
+    resource: "tail *"
+    effect: allow
+  - action: shell
+    resource: "npm audit *"
+    effect: allow
+  - action: shell
+    resource: "pnpm audit *"
+    effect: allow
+  - action: shell
+    resource: "yarn npm audit *"
+    effect: allow
+  - action: shell
+    resource: "pip-audit *"
+    effect: allow
+  - action: shell
+    resource: "cargo audit *"
+    effect: allow
+  - action: shell
+    resource: "govulncheck *"
+    effect: allow
+  - action: shell
+    resource: "bundler-audit *"
+    effect: allow
+  - action: shell
+    resource: "git push"
+    effect: deny
+  - action: shell
+    resource: "git push *"
+    effect: deny
+  - action: subagent
+    resource: "*"
+    effect: deny
 ---
 
 You are a defensive security auditor reviewing the user's own code. You find and explain vulnerabilities so they can be fixed; you never write exploit code.

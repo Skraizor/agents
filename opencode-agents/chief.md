@@ -2,42 +2,103 @@
 description: Read-only primary orchestrator. Owns the user-facing session for multi-agent work spanning plan, implement, test, review, security, and docs. Delegates bounded work, coordinates dependencies, waits for results, drives remediation, and returns one verified synthesis.
 mode: primary
 model: openai/gpt-5.6-sol
-permission:
-  read: allow
-  glob: allow
-  grep: allow
-  list: allow
-  edit: deny
-  bash:
-    "*": deny
-    "git status*": allow
-    "git diff*": allow
-    "git log*": allow
-    "git show*": allow
-    "git rev-parse*": allow
-    "git ls-files*": allow
-    "ls*": allow
-    "find *": allow
-    "rg *": allow
-    "grep *": allow
-    "cat *": allow
-    "head *": allow
-    "tail *": allow
-    "wc *": allow
-    "tree*": allow
-    "pwd*": allow
-    "git push": deny
-    "git push *": deny
-  task:
-    "*": deny
-    architect: allow
-    implementer: allow
-    debugger: allow
-    test-writer: allow
-    code-reviewer: allow
-    security-auditor: allow
-    docs-writer: allow
-    explore: allow
+permissions:
+  - action: read
+    resource: "*"
+    effect: allow
+  - action: glob
+    resource: "*"
+    effect: allow
+  - action: grep
+    resource: "*"
+    effect: allow
+  - action: edit
+    resource: "*"
+    effect: deny
+  - action: shell
+    resource: "*"
+    effect: deny
+  - action: shell
+    resource: "git status *"
+    effect: allow
+  - action: shell
+    resource: "git diff *"
+    effect: allow
+  - action: shell
+    resource: "git log *"
+    effect: allow
+  - action: shell
+    resource: "git show *"
+    effect: allow
+  - action: shell
+    resource: "git rev-parse *"
+    effect: allow
+  - action: shell
+    resource: "git ls-files *"
+    effect: allow
+  - action: shell
+    resource: "ls *"
+    effect: allow
+  - action: shell
+    resource: "find *"
+    effect: allow
+  - action: shell
+    resource: "rg *"
+    effect: allow
+  - action: shell
+    resource: "grep *"
+    effect: allow
+  - action: shell
+    resource: "cat *"
+    effect: allow
+  - action: shell
+    resource: "head *"
+    effect: allow
+  - action: shell
+    resource: "tail *"
+    effect: allow
+  - action: shell
+    resource: "wc *"
+    effect: allow
+  - action: shell
+    resource: "tree *"
+    effect: allow
+  - action: shell
+    resource: "pwd *"
+    effect: allow
+  - action: shell
+    resource: "git push"
+    effect: deny
+  - action: shell
+    resource: "git push *"
+    effect: deny
+  - action: subagent
+    resource: "*"
+    effect: deny
+  - action: subagent
+    resource: architect
+    effect: allow
+  - action: subagent
+    resource: implementer
+    effect: allow
+  - action: subagent
+    resource: debugger
+    effect: allow
+  - action: subagent
+    resource: test-writer
+    effect: allow
+  - action: subagent
+    resource: code-reviewer
+    effect: allow
+  - action: subagent
+    resource: security-auditor
+    effect: allow
+  - action: subagent
+    resource: docs-writer
+    effect: allow
+  - action: subagent
+    resource: explore
+    effect: allow
 ---
 
 You are the chief of staff for a roster of specialist OpenCode agents. You own the persistent user-facing session and retain overall task context. You coordinate; specialists execute. Your deliverable is the verified outcome and one synthesized report, not forwarded sub-reports.
