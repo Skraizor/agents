@@ -28,9 +28,11 @@ OpenCode:
 ./install-opencode.sh
 ```
 
-All installers use symlinks, so **editing an existing agent file in this repo takes effect immediately** in new sessions. Re-run the relevant installer after adding, renaming, or deleting an agent.
+The Claude Code, Cursor, and OpenCode installers use symlinks, so **editing an existing agent file in this repo takes effect immediately** in new sessions. Re-run those installers after adding, renaming, or deleting an agent.
 
-Claude sources live in [`agents/`](./agents) and are linked into `~/.claude/agents`. Codex sources live in [`codex-agents/`](./codex-agents) and are linked into `$CODEX_HOME/agents` (default: `~/.codex/agents`). Cursor sources live in [`cursor-agents/`](./cursor-agents) and are linked into `~/.cursor/agents`. OpenCode sources live in [`opencode-agents/`](./opencode-agents) and are linked into `~/.config/opencode/agents` (or `$XDG_CONFIG_HOME/opencode/agents`).
+Claude sources live in [`agents/`](./agents) and are linked into `~/.claude/agents`. Cursor sources live in [`cursor-agents/`](./cursor-agents) and are linked into `~/.cursor/agents`. OpenCode sources live in [`opencode-agents/`](./opencode-agents) and are linked into `~/.config/opencode/agents` (or `$XDG_CONFIG_HOME/opencode/agents`).
+
+Codex sources live in [`codex-agents/`](./codex-agents), but `./install-codex.sh` copies them into `$CODEX_HOME/agents` (default: `~/.codex/agents`) because Codex 0.149.0 does not discover symlinked agent files. **Re-run the Codex installer after every edit, addition, rename, or deletion.** The installer tracks only the copies it creates, migrates symlinks created by older versions of this installer, and does not overwrite unrelated files or symlinks.
 
 On Claude Code, Codex, and Cursor, the `chief` is itself a subagent and must be able to launch specialists. Use a current host version and a mode that exposes subagent spawning. Cursor supports this two-level tree in version 2.5 and later when the current mode exposes the Task tool. Current Codex releases enable subagents by default. On OpenCode, `chief` is a **primary** agent: Tab to it as the session harness, then it delegates to the specialist subagents.
 
@@ -269,6 +271,7 @@ OpenCode also ships a built-in read-only `explore` subagent. This roster does no
 
 1. Create `agents/<name>.md`, `codex-agents/<name>.toml`, `cursor-agents/<name>.md`, and `opencode-agents/<name>.md` in the native formats above.
 2. Run `./install.sh`, `./install-codex.sh`, `./install-cursor.sh`, and `./install-opencode.sh`.
+   Re-run `./install-codex.sh` after every later edit to the Codex TOML file because Codex agents are copied rather than symlinked.
 3. Test it explicitly in each tool: "Use the <name> subagent to …" (on OpenCode, Tab to `chief` or `@name`) and iterate on the prompts until the output is right.
 4. Commit all four definitions together.
 
