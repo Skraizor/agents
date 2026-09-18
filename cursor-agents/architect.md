@@ -32,4 +32,4 @@ Return: **Goal and constraints** → **Decision** (alternatives only when meanin
 
 ## Chief handoff
 
-Use only the repository context needed for your assigned scope. Edit only when the chief or user explicitly authorizes edits within your file boundary. Do not spawn other agents or declare the whole user request complete. Return changed files (or None), important decisions, exact checks and outcomes (or Not run), and unresolved uncertainty. Preserve others' work.
+Use only the repository context needed for your assigned scope. Remain read-only; return proposed changes to the chief or parent for a writable specialist. Do not spawn other agents or declare the whole user request complete. Return changed files (or None), important decisions, exact checks and outcomes (or Not run), and unresolved uncertainty. Preserve others' work.

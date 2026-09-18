@@ -4,6 +4,20 @@
 # Idempotent — re-run after editing, adding, renaming, or deleting an agent.
 set -euo pipefail
 
+overwrite=false
+for arg in "$@"; do
+  case "$arg" in
+    --overwrite) overwrite=true ;;
+    -h|--help)
+      echo "Usage: $0 [--overwrite]"
+      echo "  --overwrite  Replace conflicting agent files or symlinks and manage the new copies."
+      echo "               Directories (including symlinks to directories) are always skipped."
+      exit 0
+      ;;
+    *) echo "Unknown option: $arg. Use --help for usage." >&2; exit 2 ;;
+  esac
+done
+
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC_DIR="$REPO_DIR/codex-agents"
 CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
@@ -26,14 +40,18 @@ for src in "$SRC_DIR"/*.toml; do
   name="$(basename "$src")"
   dest="$DEST_DIR/$name"
 
-  if [[ -L "$dest" ]]; then
+  if [[ -d "$dest" ]]; then
+    echo "SKIP  $name — a directory already exists at $dest"
+    skipped=$((skipped + 1))
+    continue
+  elif [[ -L "$dest" ]]; then
     target="$(readlink "$dest")"
-    if [[ "$target" != "$SRC_DIR/"* ]]; then
+    if [[ "$target" != "$SRC_DIR/"* && "$overwrite" == false ]]; then
       echo "SKIP  $name — an unrelated symlink already exists at $dest"
       skipped=$((skipped + 1))
       continue
     fi
-  elif [[ -e "$dest" ]] && ! is_managed "$name"; then
+  elif [[ -e "$dest" && "$overwrite" == false ]] && ! is_managed "$name"; then
     echo "SKIP  $name — a real file already exists at $dest (won't overwrite)"
     skipped=$((skipped + 1))
     continue

@@ -32,9 +32,9 @@ The Claude Code, Cursor, and OpenCode installers use symlinks, so **editing an e
 
 Claude sources live in [`agents/`](./agents) and are linked into `~/.claude/agents`. Cursor sources live in [`cursor-agents/`](./cursor-agents) and are linked into `~/.cursor/agents`. OpenCode sources live in [`opencode-agents/`](./opencode-agents) and are linked into `~/.config/opencode/agents` (or `$XDG_CONFIG_HOME/opencode/agents`).
 
-Codex sources live in [`codex-agents/`](./codex-agents), but `./install-codex.sh` copies them into `$CODEX_HOME/agents` (default: `~/.codex/agents`) because Codex 0.149.0 does not discover symlinked agent files. **Re-run the Codex installer after every edit, addition, rename, or deletion.** The installer tracks only the copies it creates, migrates symlinks created by older versions of this installer, and does not overwrite unrelated files or symlinks.
+Codex sources live in [`codex-agents/`](./codex-agents), but `./install-codex.sh` copies them into `$CODEX_HOME/agents` (default: `~/.codex/agents`) because Codex 0.149.0 does not discover symlinked agent files. **Re-run the Codex installer after every edit, addition, rename, or deletion.** The installer tracks only the copies it creates, migrates symlinks created by older versions of this installer, and skips unrelated files or symlinks by default. Run `./install-codex.sh --overwrite` to replace conflicting agent files or symlinks with repository copies and adopt them into the management manifest. This replaces local customizations for matching agent names; directories (including symlinks to directories) are always skipped.
 
-OpenCode runs `chief` as the persistent **primary** Sol agent: Tab to it as the session harness. On Claude Code, Codex, and Cursor, `chief` is a subagent; its context persists only for that delegated task. Select a Sol-class host session and delegate the whole task to `chief` where the host supports it. These repo files cannot change the host main-thread model. Cursor needs a mode exposing the Task tool; Codex delegation requires a direct request or applicable instruction. See [Host limits](#host-limits).
+OpenCode runs `chief` as the persistent **primary** Sol agent: Tab to it as the session harness. For Claude Code, start `claude --agent chief` to use the Sonnet chief as the main session. On Codex and Cursor, delegate the task to `chief`; the host main thread remains separate. Nested delegation depends on host tool access and depth limits. See [Host limits](#host-limits).
 
 ## The roster
 
@@ -43,7 +43,7 @@ OpenCode runs `chief` as the persistent **primary** Sol agent: Tab to it as the 
 | [chief](agents/chief.md) | Orchestrates the roster for multi-step work; returns one synthesized report | No — coordinates + verifies |
 | [implementer](agents/implementer.md) | Implements a clear requirement or architecture plan within an assigned file scope | Yes |
 | [code-reviewer](agents/code-reviewer.md) | Fresh independent routine review of the final change | No — reports only |
-| [escalation-reviewer](agents/escalation-reviewer.md) | Fresh Astra review for high-risk, uncertain, disputed, or explicitly highest-quality work | No — reports only |
+| [escalation-reviewer](agents/escalation-reviewer.md) | Fresh escalation review for high-risk, uncertain, disputed, or explicitly highest-quality work | No — reports only |
 | [debugger](agents/debugger.md) | Reproduces bugs, finds root cause with evidence, applies minimal fix | Yes |
 | [test-writer](agents/test-writer.md) | Writes behavior-focused tests in the project's existing framework, runs them | Yes |
 | [docs-writer](agents/docs-writer.md) | READMEs, API docs, runbooks — grounded in the actual code | Docs only |
@@ -96,37 +96,52 @@ Each subagent runs in its **own context window**. Give it a self-contained brief
 
 ## Delivery and review routing
 
-The Sol chief owns the task context, derives acceptance criteria, classifies risk, plans, and gives bounded work to the cheapest capable specialists. Routine Codex implementation and debugging use Terra; exploration, tests, and docs use Terra; mechanical edits use Luna. OpenCode uses its configured local model for implementation, debugging, tests, docs, and local exploration. Use Sol architecture or security specialists when the work calls for them. Workers inspect only relevant context, stay inside assigned writable scopes, do not spawn agents, and return changed files, decisions, exact checks, and uncertainty.
+The chief owns the task context, derives acceptance criteria, classifies risk, plans, and gives bounded work to the cheapest capable specialists. Routine Codex implementation and debugging use Terra; exploration, tests, and docs use Terra; mechanical edits use Luna. OpenCode uses its configured local model for implementation, debugging, tests, docs, and local exploration. Use the host’s configured architecture or security specialists when the work calls for them. Claude uses Sonnet for chief and routine review, Opus for escalation, and inherited models for other specialists. Cursor inherits the session model for all roles. Workers inspect only relevant context, stay inside assigned writable scopes, do not spawn agents, and return changed files, decisions, exact checks, and uncertainty.
 
-After implementation, the chief inspects the final diff and source itself, checks worker claims against direct evidence, and runs or coordinates appropriate build, tests, lint, static analysis, and repository-specific checks. It then sends a **fresh** `code-reviewer` the [review packet](REVIEW_PACKET.md), final diff including relevant untracked files, relevant sources, and repository instructions. The reviewer checks requirements, correctness, edge cases, test coverage, conventions, maintainability, visible security issues, and scope drift. Reviewers do not edit unless the chief explicitly asks and authorizes it. Do not forward full worker transcripts or unrelated exploration logs.
+After implementation, the chief inspects the final diff and source itself, checks worker claims against direct evidence, and runs or coordinates appropriate build, tests, lint, static analysis, and repository-specific checks. It then sends a **fresh** `code-reviewer` the [review packet](REVIEW_PACKET.md), final diff including relevant untracked files, relevant sources, and repository instructions. The reviewer checks requirements, correctness, edge cases, test coverage, conventions, maintainability, visible security issues, and scope drift. Reviewers remain read-only; fixes go to a writable specialist. Do not forward full worker transcripts or unrelated exploration logs.
+
+The routing policy is shared; model selection is host-specific:
+
+| Host | Chief / routine reviewer | Escalation reviewer |
+|---|---|---|
+| Claude Code | `sonnet` | `opus` |
+| Codex | `gpt-5.6-sol` | `gpt-6-astra` |
+| Cursor | `inherit` | `inherit` (independent review, no automatic model upgrade) |
+| OpenCode | `openai/gpt-5.6-sol` | `openai/gpt-6-astra` |
 
 | Risk | Route |
 |---|---|
 | Low | Workers → chief verification → routine reviewer |
-| Medium | Workers → chief verification → routine reviewer; Astra only for unresolved uncertainty or disagreement |
-| High | Workers → chief verification → routine reviewer → Astra escalation reviewer |
-| Explicit highest-quality review | Include Astra escalation reviewer after routine review |
+| Medium | Workers → chief verification → routine reviewer; escalation review only for unresolved uncertainty or disagreement |
+| High | Workers → chief verification → routine reviewer → escalation reviewer |
+| Explicit highest-quality review | Include escalation reviewer after routine review |
 
-Risk is based on impact and uncertainty, not simply the number of files. Treat an applicable Astra trigger as high for routing, even if the initial classification was lower. Invoke Astra for authentication, authorization, secrets, cryptography, or sensitive data; destructive data operations or database migrations; concurrency, distributed workflows, or difficult state transitions; public API or backward-compatibility changes; major architecture changes; a large or unusually cross-cutting diff; failed or unavailable verification; meaningful unresolved uncertainty; disagreement between chief and routine reviewer; or an explicit request for highest-quality review. A high-risk classification requires Astra. File changes alone do not trigger it. The chief addresses findings, reruns affected checks, and stops after two unsuccessful review/fix cycles with a clear blocker or disagreement.
+Risk is based on impact and uncertainty, not simply the number of files. Treat an applicable escalation trigger as high for routing, even if the initial classification was lower. Invoke `escalation-reviewer` for authentication, authorization, secrets, cryptography, or sensitive data; destructive data operations or database migrations; concurrency, distributed workflows, or difficult state transitions; public API or backward-compatibility changes; major architecture changes; a large or unusually cross-cutting diff; failed or unavailable verification; meaningful unresolved uncertainty; disagreement between chief and routine reviewer; or an explicit request for highest-quality review. A high-risk classification requires escalation review. File changes alone do not trigger it. The chief addresses findings, reruns affected checks, and stops after two unsuccessful review/fix cycles with a clear blocker or disagreement.
 
 ```mermaid
 flowchart TD
-    U[User / main entry] --> C[Sol chief: task context]
-    C --> W[Focused Terra / Luna / local workers]
+    U[User / main entry] --> C[Chief: task context]
+    C --> W[Host-configured specialists]
     W --> V[Chief integration and verification]
-    V --> R[Fresh Sol routine reviewer]
-    R -->|Conditional trigger| A[Fresh Astra escalation reviewer]
+    V --> R[Fresh routine reviewer]
+    R -->|Conditional trigger| A[Fresh escalation reviewer]
     R -->|Findings| C
     A -->|Findings| C
     R -->|No trigger| F[Chief final result]
     A --> F
 ```
 
-A normal low-risk feature runs through implementation, verification, and routine review without invoking Astra. For a reproducible failure, use the debugger; for a real design choice, use the architect. A focused security audit can supplement the review on relevant changes. The chief should not start extra specialists merely to fill a roster.
+A normal low-risk feature runs through implementation, verification, and routine review without invoking escalation review. For a reproducible failure, use the debugger; for a real design choice, use the architect. A focused security audit can supplement the review on relevant changes. The chief should not start extra specialists merely to fill a roster.
 
 ### Host limits
 
-OpenCode is the only format here with a native `mode: primary`; its chief is pinned to `openai/gpt-5.6-sol`. Codex pins the `chief` **subagent** to `gpt-5.6-sol`, but cannot select the persistent main session model through these role files. Claude and Cursor use `model: inherit` for the chief, workers, and reviewers, so this repository cannot guarantee Sol/Terra/Astra tiers there; select the appropriate host model before delegation if available. An inherited `escalation-reviewer` is an escalation *role*, but it is an Astra review only when the host actually runs it on Astra. If that model is unavailable in the host, use the Codex or OpenCode escalation reviewer and disclose the gap. Native role files specify behavior and conditional dispatch instructions; they cannot automatically enforce risk routing, fresh context, or model choice across every host. The chief must apply the gates.
+OpenCode defines `chief` with native `mode: primary`. Claude Code can run the definition as its main session via `claude --agent chief`; when delegated instead, the chief needs Agent access and sufficient nesting depth. See [Claude Code subagents](https://code.claude.com/docs/en/sub-agents).
+
+Codex pins its chief subagent to Sol; role files do not select the parent session model. Delegation must be authorized and permitted by the session. See [Codex subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents).
+
+Cursor uses `model: inherit`, so escalation adds an independent review without promising a different model. Use a model supported by your Cursor installation if configuring an explicit override. Nested dispatch needs Task access and available depth; see [Cursor subagents](https://cursor.com/docs/subagents).
+
+If a chief cannot dispatch, it returns actionable briefs and pending review gates to its parent rather than claiming the workflow completed. Host settings can override model choices or permissions; report unavailable review gates. The role files do not enforce routing automatically.
 
 ### Overlap with built-ins
 

@@ -4,11 +4,11 @@ These examples explicitly name an agent so Codex can route the task predictably.
 
 ## Chief workflow
 
-On OpenCode, Tab to the Sol `chief` primary agent and give it the request. On Codex, Claude Code, or Cursor, select a Sol-class main model when available and delegate the whole task to `chief`; these hosts define `chief` as a subagent, so the host main thread remains separate. See the [host limits](README.md#host-limits).
+On OpenCode, Tab to the Sol `chief` primary agent. On Claude Code, launch `claude --agent chief` for the Sonnet chief session. On Codex or Cursor, delegate to `chief` with nested delegation available. See the [host limits](README.md#host-limits).
 
 > Use the `chief` to implement **[outcome]**. Acceptance criteria: **[checkable criteria]**. Classify risk, delegate bounded work to the cheapest capable specialists, inspect the result and verification yourself, send a compact [review packet](REVIEW_PACKET.md) and final diff to a fresh routine reviewer, invoke `escalation-reviewer` only for a defined trigger, resolve findings, and report changed files, exact checks, skipped checks, and remaining uncertainty.
 
-For a high-risk change or an explicit highest-quality review, the chief still runs deterministic checks and routine review before fresh Astra escalation. There is no need to summon every specialist for a small task.
+For a high-risk change or an explicit highest-quality review, the chief still runs deterministic checks and routine review before fresh escalation review (Opus in Claude, Astra in Codex/OpenCode, inherited model in Cursor). There is no need to summon every specialist for a small task.
 
 ## Core delivery agents
 
@@ -58,7 +58,7 @@ Review and add coverage:
 
 > Use the `docs-writer` subagent to update **[README, API reference, runbook, onboarding guide, or release notes]** for **[stable behavior]**. Verify every command, configuration key, default, and referenced path against the code. Edit documentation sources only and report any code/docs contradiction rather than changing product behavior.
 
-## Astra escalation review
+## Escalation review
 
 > Use a fresh `escalation-reviewer` on **[high-risk trigger, unresolved uncertainty, disagreement, or explicit highest-quality request]**. Supply the same compact review packet, final diff, relevant sources, repository instructions, and routine findings. Return actionable findings and remaining uncertainty; do not edit.
 
