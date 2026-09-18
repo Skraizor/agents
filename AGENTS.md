@@ -31,4 +31,9 @@ Non-obvious caveats:
 - When adding an agent, add all four native formats together and re-run all four installers
   (see `README.md` "Adding a new agent").
 - OpenCode `chief` is a **primary** agent (`mode: primary`); the other OpenCode roles are
-  subagents. Frontier roles use `openai/gpt-5.6-sol`; local roles use `ollama/devstral:24b`.
+  subagents. Its chief and routine reviewer use `openai/gpt-5.6-sol`, its escalation reviewer
+  uses `openai/gpt-6-astra`, and local workers use `ollama/qwen3-coder:30b`.
+- OpenCode 1.18.23 ignores the V2 `permissions` array. Keep its V1 `permission` mirror in sync
+  with V2 rules until the installed host is upgraded; validate effective rules with `opencode agent list`.
+- Preserve existing uncommitted changes when editing definitions, especially changes made in
+  another session. Keep review routing and review-packet instructions consistent across hosts.
