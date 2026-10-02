@@ -2,21 +2,13 @@
 
 These examples explicitly name an agent so Codex can route the task predictably. Replace bracketed placeholders with concrete repository details, constraints, and acceptance criteria.
 
-## Whole-team workflow
+## Chief workflow
 
-Use the `chief` when a task benefits from several specialties and you want one final report instead of managing each handoff yourself.
+On OpenCode, Tab to the Sol `chief` primary agent. On Claude Code, launch `claude --agent chief` for the Sonnet chief session. On Codex or Cursor, delegate to `chief` with nested delegation available. See the [host limits](README.md#host-limits).
 
-> Use the `chief` subagent to coordinate the full specialist roster on this task: **[describe the objective]**.
->
-> Acceptance criteria: **[list the required outcomes]**.
->
-> Explicitly use the full roster wherever applicable: have `explorer` map the current implementation; `critical-architect` assess consequential cross-system risks; `architect` produce the implementation plan; `mechanical-worker` handle clearly bounded repetitive edits; `implementer` own production changes; `debugger` investigate any reproducible failures; `test-writer` independently review coverage and add risk-based tests; `code-reviewer` perform correctness and regression review; `security-auditor` perform a focused security review; and `docs-writer` update documentation after behavior stabilizes.
->
-> Assign non-overlapping writable scopes, preserve existing workspace changes, remediate confirmed findings, and rerun relevant verification. If a role is genuinely inapplicable, mark it skipped and explain why instead of inventing work. Return one synthesized final report with changes, verification evidence, remediated findings, and remaining risks.
+> Use the `chief` to implement **[outcome]**. Acceptance criteria: **[checkable criteria]**. Classify risk, delegate bounded work to the cheapest capable specialists, inspect the result and verification yourself, send a compact [review packet](REVIEW_PACKET.md) and final diff to a fresh routine reviewer, invoke `escalation-reviewer` only for a defined trigger, resolve findings, and report changed files, exact checks, skipped checks, and remaining uncertainty.
 
-For a normal feature where every role is unlikely to add value, use a shorter brief and let the chief right-size the workflow:
-
-> Use the `chief` subagent to implement **[feature]**. The acceptance criteria are **[criteria]**. Coordinate only the specialists that materially improve the result, preserve existing changes, verify the final behavior, and return one synthesized report.
+For a high-risk change or an explicit highest-quality review, the chief still runs deterministic checks and routine review before fresh escalation review (Opus in Claude, Astra in Codex/OpenCode, inherited model in Cursor). There is no need to summon every specialist for a small task.
 
 ## Core delivery agents
 
@@ -48,7 +40,7 @@ Review and add coverage:
 
 ### Code reviewer
 
-> Use the `code-reviewer` subagent to review **[working-tree diff, branch, commit, or PR]** against **[base or acceptance criteria]**. Trace affected execution paths and report only verified introduced defects, ranked P0–P3, with concrete evidence and suggested fixes. Do not edit files.
+> Use a fresh `code-reviewer` subagent to review **[final diff]** against the completed [review packet](REVIEW_PACKET.md). Include relevant source files and repository instructions. Trace affected paths; report only verified introduced defects, ranked P0–P3, with file:line evidence and suggested fixes. Do not edit files.
 
 ## Conditional specialists
 
@@ -66,9 +58,13 @@ Review and add coverage:
 
 > Use the `docs-writer` subagent to update **[README, API reference, runbook, onboarding guide, or release notes]** for **[stable behavior]**. Verify every command, configuration key, default, and referenced path against the code. Edit documentation sources only and report any code/docs contradiction rather than changing product behavior.
 
+## Escalation review
+
+> Use a fresh `escalation-reviewer` on **[high-risk trigger, unresolved uncertainty, disagreement, or explicit highest-quality request]**. Supply the same compact review packet, final diff, relevant sources, repository instructions, and routine findings. Return actionable findings and remaining uncertainty; do not edit.
+
 ## Critical architect
 
-Use `critical-architect` when a decision crosses major system boundaries, has a large blast radius, or would be difficult to reverse. It should be unusual for an ordinary feature to need this role.
+Use the Codex `critical-architect` (Sol) when a design decision crosses major system boundaries, has a large blast radius, or would be difficult to reverse. Its design work does not replace the post-implementation Astra escalation review when a trigger applies.
 
 ### Zero-downtime data migration
 

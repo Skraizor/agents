@@ -26,9 +26,22 @@ Non-obvious caveats:
   symlinked agent files. Re-run `./install-codex.sh` after every Codex agent edit as well as
   after adding, renaming, or deleting one. It migrates this repository's old Codex symlinks.
 - Installers are idempotent and refuse to overwrite unrelated files at the destination (they
-  print `SKIP`). Symlink installers prune only dangling links that point back into this repo;
+  print `SKIP`) by default. Codex supports `--overwrite` to replace conflicting agent files
+  or symlinks and adopt the copies into its manifest; directories are always skipped.
+  Symlink installers prune only dangling links that point back into this repo;
   the Codex installer prunes only copies recorded in its management manifest.
 - When adding an agent, add all four native formats together and re-run all four installers
   (see `README.md` "Adding a new agent").
 - OpenCode `chief` is a **primary** agent (`mode: primary`); the other OpenCode roles are
-  subagents. Frontier roles use `openai/gpt-5.6-sol`; local roles use `ollama/devstral:24b`.
+  subagents. Its chief and routine reviewer use `openai/gpt-5.6-sol`, its escalation reviewer
+  uses `openai/gpt-6-astra`, and local workers use `ollama/qwen3-coder:30b`.
+- OpenCode 1.18.23 ignores the V2 `permissions` array. Keep its V1 `permission` mirror in sync
+  with V2 rules until the installed host is upgraded; validate effective rules with `opencode agent list`.
+- Preserve existing uncommitted changes when editing definitions, especially changes made in
+  another session. Keep review routing and review-packet instructions consistent across hosts.
+
+Host-specific routing:
+- Claude Code uses Sonnet for chief/routine review and Opus for escalation. Start the chief
+  with `claude --agent chief` for main-session orchestration; nested dispatch needs host support.
+- Cursor inherits its session model; escalation is an independent review, not a promised model upgrade.
+- Keep shared review gates consistent, but use only each host's available role names and model syntax.

@@ -32,9 +32,9 @@ The Claude Code, Cursor, and OpenCode installers use symlinks, so **editing an e
 
 Claude sources live in [`agents/`](./agents) and are linked into `~/.claude/agents`. Cursor sources live in [`cursor-agents/`](./cursor-agents) and are linked into `~/.cursor/agents`. OpenCode sources live in [`opencode-agents/`](./opencode-agents) and are linked into `~/.config/opencode/agents` (or `$XDG_CONFIG_HOME/opencode/agents`).
 
-Codex sources live in [`codex-agents/`](./codex-agents), but `./install-codex.sh` copies them into `$CODEX_HOME/agents` (default: `~/.codex/agents`) because Codex 0.149.0 does not discover symlinked agent files. **Re-run the Codex installer after every edit, addition, rename, or deletion.** The installer tracks only the copies it creates, migrates symlinks created by older versions of this installer, and does not overwrite unrelated files or symlinks.
+Codex sources live in [`codex-agents/`](./codex-agents), but `./install-codex.sh` copies them into `$CODEX_HOME/agents` (default: `~/.codex/agents`) because Codex 0.149.0 does not discover symlinked agent files. **Re-run the Codex installer after every edit, addition, rename, or deletion.** The installer tracks only the copies it creates, migrates symlinks created by older versions of this installer, and skips unrelated files or symlinks by default. Run `./install-codex.sh --overwrite` to replace conflicting agent files or symlinks with repository copies and adopt them into the management manifest. This replaces local customizations for matching agent names; directories (including symlinks to directories) are always skipped.
 
-On Claude Code, Codex, and Cursor, the `chief` is itself a subagent and must be able to launch specialists. Use a current host version and a mode that exposes subagent spawning. Cursor supports this two-level tree in version 2.5 and later when the current mode exposes the Task tool. Current Codex releases enable subagents by default. On OpenCode, `chief` is a **primary** agent: Tab to it as the session harness, then it delegates to the specialist subagents.
+OpenCode runs `chief` as the persistent **primary** Sol agent: Tab to it as the session harness. For Claude Code, start `claude --agent chief` to use the Sonnet chief as the main session. On Codex and Cursor, delegate the task to `chief`; the host main thread remains separate. Nested delegation depends on host tool access and depth limits. See [Host limits](#host-limits).
 
 ## The roster
 
@@ -42,35 +42,38 @@ On Claude Code, Codex, and Cursor, the `chief` is itself a subagent and must be 
 |---|---|---|
 | [chief](agents/chief.md) | Orchestrates the roster for multi-step work; returns one synthesized report | No — coordinates + verifies |
 | [implementer](agents/implementer.md) | Implements a clear requirement or architecture plan within an assigned file scope | Yes |
-| [code-reviewer](agents/code-reviewer.md) | Reviews diffs for bugs, edge cases, maintainability | No — reports only |
+| [code-reviewer](agents/code-reviewer.md) | Fresh independent routine review of the final change | No — reports only |
+| [escalation-reviewer](agents/escalation-reviewer.md) | Fresh escalation review for high-risk, uncertain, disputed, or explicitly highest-quality work | No — reports only |
 | [debugger](agents/debugger.md) | Reproduces bugs, finds root cause with evidence, applies minimal fix | Yes |
 | [test-writer](agents/test-writer.md) | Writes behavior-focused tests in the project's existing framework, runs them | Yes |
 | [docs-writer](agents/docs-writer.md) | READMEs, API docs, runbooks — grounded in the actual code | Docs only |
 | [security-auditor](agents/security-auditor.md) | Defensive vulnerability audit with severity + remediation | No — reports only |
 | [architect](agents/architect.md) | Designs features before coding: approaches, trade-offs, step-by-step plan | No — plan is the deliverable |
 
-Codex additionally includes [explorer](codex-agents/explorer.toml) for repository reconnaissance, [mechanical-worker](codex-agents/mechanical-worker.toml) for low-judgment repetitive edits, and [critical-architect](codex-agents/critical-architect.toml) for rare consequential cross-system decisions. Its [test-writer](codex-agents/test-writer.toml) also acts as an independent coverage reviewer and risk-based test designer.
+Codex additionally includes [explorer](codex-agents/explorer.toml) for repository reconnaissance, [mechanical-worker](codex-agents/mechanical-worker.toml) for low-judgment repetitive edits, and [critical-architect](codex-agents/critical-architect.toml) for rare consequential cross-system decisions on Sol. Its [test-writer](codex-agents/test-writer.toml) also acts as an independent coverage reviewer and risk-based test designer.
 
 For Codex, the roster is grouped by intended frequency:
 
 - **Core delivery:** `chief`, `explorer`, `architect`, `implementer`, `debugger`, `test-writer`, `code-reviewer`
 - **Conditional specialists:** `mechanical-worker`, `security-auditor`
 - **Documentation specialist:** `docs-writer`
-- **Rare escalation:** `critical-architect`
+- **Rare design specialist:** `critical-architect`
+- **Conditional review escalation:** `escalation-reviewer`
 
 | Codex agent | Model | Reasoning |
 |---|---|---|
 | `chief` | `gpt-5.6-sol` | Medium |
 | `explorer` | `gpt-5.6-terra` | Low |
 | `architect` | `gpt-5.6-sol` | High |
-| `implementer` | `gpt-5.6-sol` | Medium |
-| `debugger` | `gpt-5.6-sol` | High |
+| `implementer` | `gpt-5.6-terra` | Medium |
+| `debugger` | `gpt-5.6-terra` | Medium |
 | `test-writer` | `gpt-5.6-terra` | Medium |
 | `code-reviewer` | `gpt-5.6-sol` | High |
 | `mechanical-worker` | `gpt-5.6-luna` | Low |
 | `security-auditor` | `gpt-5.6-sol` | High |
 | `docs-writer` | `gpt-5.6-terra` | Medium |
-| `critical-architect` | `gpt-6-astra` | Medium |
+| `critical-architect` | `gpt-5.6-sol` | High |
+| `escalation-reviewer` | `gpt-6-astra` | Medium |
 
 The read-only split is deliberate: reviewers and auditors that can't edit can't "helpfully" change the thing they're judging.
 
@@ -91,41 +94,54 @@ Invocation differs slightly by host:
 
 Each subagent runs in its **own context window**. Give it a self-contained brief; a huge debugging session then stays out of the main context.
 
-## When to reach for which agent
+## Delivery and review routing
 
-**A normal feature, start to finish:**
+The chief owns the task context, derives acceptance criteria, classifies risk, plans, and gives bounded work to the cheapest capable specialists. Routine Codex implementation and debugging use Terra; exploration, tests, and docs use Terra; mechanical edits use Luna. OpenCode uses its configured local model for implementation, debugging, tests, docs, and local exploration. Use the host’s configured architecture or security specialists when the work calls for them. Claude uses Sonnet for chief and routine review, Opus for escalation, and inherited models for other specialists. Cursor inherits the session model for all roles. Workers inspect only relevant context, stay inside assigned writable scopes, do not spawn agents, and return changed files, decisions, exact checks, and uncertainty.
 
+After implementation, the chief inspects the final diff and source itself, checks worker claims against direct evidence, and runs or coordinates appropriate build, tests, lint, static analysis, and repository-specific checks. It then sends a **fresh** `code-reviewer` the [review packet](REVIEW_PACKET.md), final diff including relevant untracked files, relevant sources, and repository instructions. The reviewer checks requirements, correctness, edge cases, test coverage, conventions, maintainability, visible security issues, and scope drift. Reviewers remain read-only; fixes go to a writable specialist. Do not forward full worker transcripts or unrelated exploration logs.
+
+The routing policy is shared; model selection is host-specific:
+
+| Host | Chief / routine reviewer | Escalation reviewer |
+|---|---|---|
+| Claude Code | `sonnet` | `opus` |
+| Codex | `gpt-5.6-sol` | `gpt-6-astra` |
+| Cursor | `inherit` | `inherit` (independent review, no automatic model upgrade) |
+| OpenCode | `openai/gpt-5.6-sol` | `openai/gpt-6-astra` |
+
+| Risk | Route |
+|---|---|
+| Low | Workers → chief verification → routine reviewer |
+| Medium | Workers → chief verification → routine reviewer; escalation review only for unresolved uncertainty or disagreement |
+| High | Workers → chief verification → routine reviewer → escalation reviewer |
+| Explicit highest-quality review | Include escalation reviewer after routine review |
+
+Risk is based on impact and uncertainty, not simply the number of files. Treat an applicable escalation trigger as high for routing, even if the initial classification was lower. Invoke `escalation-reviewer` for authentication, authorization, secrets, cryptography, or sensitive data; destructive data operations or database migrations; concurrency, distributed workflows, or difficult state transitions; public API or backward-compatibility changes; major architecture changes; a large or unusually cross-cutting diff; failed or unavailable verification; meaningful unresolved uncertainty; disagreement between chief and routine reviewer; or an explicit request for highest-quality review. A high-risk classification requires escalation review. File changes alone do not trigger it. The chief addresses findings, reruns affected checks, and stops after two unsuccessful review/fix cycles with a clear blocker or disagreement.
+
+```mermaid
+flowchart TD
+    U[User / main entry] --> C[Chief: task context]
+    C --> W[Host-configured specialists]
+    W --> V[Chief integration and verification]
+    V --> R[Fresh routine reviewer]
+    R -->|Conditional trigger| A[Fresh escalation reviewer]
+    R -->|Findings| C
+    A -->|Findings| C
+    R -->|No trigger| F[Chief final result]
+    A --> F
 ```
-1. architect        → only if the change has unresolved design decisions
-2. implementer      → implement the agreed behavior in an explicit file scope
-3. test-writer      → independently review coverage, then add contract-based tests where authorized
-4. code-reviewer ∥ security-auditor → independent read-only review as risk warrants
-5. implementer      → remediate confirmed findings, then re-run verification
-6. docs-writer      → update docs after behavior is stable
-```
 
-**Something's broken:** go straight to **debugger**. Give it the exact error output and how to reproduce. It's built to reproduce first and refuse to guess.
+A normal low-risk feature runs through implementation, verification, and routine review without invoking escalation review. For a reproducible failure, use the debugger; for a real design choice, use the architect. A focused security audit can supplement the review on relevant changes. The chief should not start extra specialists merely to fill a roster.
 
-**Before a release / after touching auth, uploads, SQL, or secrets:** run **security-auditor** over the changed area. Also worth one full pass on any project going public.
+### Host limits
 
-**Whole pipelines: send the chief.** For work spanning several specialties, delegate once instead of driving each stage yourself:
+OpenCode defines `chief` with native `mode: primary`. Claude Code can run the definition as its main session via `claude --agent chief`; when delegated instead, the chief needs Agent access and sufficient nesting depth. See [Claude Code subagents](https://code.claude.com/docs/en/sub-agents).
 
-> Use the **chief** subagent: add CSV export to the order-system reports page — plan it, implement, test, review, and update the docs.
->
-> On OpenCode, Tab to **chief** and give it the same request.
+Codex pins its chief subagent to Sol; role files do not select the parent session model. Delegation must be authorized and permitted by the session. See [Codex subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 
-The chief scouts the repo, turns the request into acceptance criteria, assigns non-overlapping file ownership, runs independent read-only reviews in parallel, routes confirmed findings back for fixes, verifies the final state, updates docs last, and returns a single synthesized report.
+Cursor uses `model: inherit`, so escalation adds an independent review without promising a different model. Use a model supported by your Cursor installation if configuring an explicit override. Nested dispatch needs Task access and available depth; see [Cursor subagents](https://cursor.com/docs/subagents).
 
-All Codex roles pin a model and reasoning effort. Coordination, implementation, debugging, review, security, and architecture use `gpt-5.6-sol`; exploration, test engineering, and documentation use `gpt-5.6-terra`; repetitive mechanical work uses `gpt-5.6-luna`; and rare critical architecture uses `gpt-6-astra`. Claude and Cursor definitions continue to inherit their host model by default.
-
-Chief vs. driving agents yourself: the chief keeps your main conversation clean (one report instead of six), but you give up mid-pipeline steering. Use the chief for well-understood work you'd happily review at the end; drive agents individually when you expect to make judgment calls between stages.
-
-**Rules of thumb**
-
-- Use **architect** when a material design decision remains. A multi-file but already-scoped change can go directly to **implementer**.
-- Give every writable agent an explicit file scope, especially when other agents or the user already have changes in the working tree.
-- Use **code-reviewer** before committing anything you'd hesitate to push directly to main.
-- Don't chain agents for trivial tasks — a typo fix doesn't need a plan, tests, review, and docs. The agents are leverage for meaningful work, not ceremony.
+If a chief cannot dispatch, it returns actionable briefs and pending review gates to its parent rather than claiming the workflow completed. Host settings can override model choices or permissions; report unavailable review gates. The role files do not enforce routing automatically.
 
 ### Overlap with built-ins
 
@@ -188,13 +204,13 @@ The subagent's complete prompt.
 
 Use `readonly: true` for reviewers and planners, and `readonly: false` for agents that edit code or documentation. Cursor supports project-local agents in `.cursor/agents/`; this repo installs the same definitions globally in `~/.cursor/agents/`.
 
-OpenCode agents are Markdown files with YAML frontmatter. The filename (minus `.md`) is the agent id. `permissions` is an ordered array of `{action, resource, effect}` rules (last match wins); `mode` is `primary` for the session harness and `subagent` for specialists:
+OpenCode agents are Markdown files with YAML frontmatter. The filename (minus `.md`) is the agent id. The V2 `permissions` array uses ordered `{action, resource, effect}` rules (last match wins). The installed OpenCode 1.18.23 uses the mirrored V1 `permission` map instead, so keep both equivalent until upgrading. `mode` is `primary` for the session harness and `subagent` for specialists:
 
 ```markdown
 ---
 description: What it does and when OpenCode should use it.
 mode: subagent
-model: ollama/devstral:24b
+model: ollama/qwen3-coder:30b
 permissions:
   - action: edit
     resource: "*"
@@ -211,12 +227,19 @@ permissions:
   - action: subagent
     resource: "*"
     effect: deny
+permission:                    # OpenCode 1.x mirror
+  edit: allow
+  bash:
+    "*": allow
+    "git push": deny
+    "git push *": deny
+  task: deny
 ---
 
 The agent's complete role prompt.
 ```
 
-Use `mode: primary` only for `chief`. Specialists stay `mode: subagent` so they cannot become a competing session harness. Prefer native V2 `permissions` over the V1 `permission` object (`bash`/`task`/`list`) and the deprecated `tools` boolean map. This repo installs OpenCode definitions globally in `~/.config/opencode/agents/`; OpenCode also discovers project-local files in `.opencode/agents/`.
+Use `mode: primary` only for `chief`. Specialists stay `mode: subagent` so they cannot become a competing session harness. Keep V2 `permissions` and the V1 `permission` mirror synchronized. The installed 1.18.23 runtime reads the V1 mirror; a V2 runtime reads the V2 rules. Do not rely on prompt-only restrictions for read-only agents. Avoid the deprecated `tools` boolean map. This repo installs OpenCode definitions globally in `~/.config/opencode/agents/`; OpenCode also discovers project-local files in `.opencode/agents/`.
 
 ## OpenCode
 
@@ -226,28 +249,32 @@ OpenCode is intended as the main agent harness for a hybrid cloud/local setup. T
 User
   │
   ▼
-chief / frontier model
+chief / Sol primary model
   │
-  ├── architect / frontier
+  ├── architect / Sol
+  ├── local-explorer / local
   ├── implementer / local
   ├── debugger / local
   ├── test-writer / local
   ├── docs-writer / local
-  ├── code-reviewer / frontier
-  └── security-auditor / frontier
+  ├── code-reviewer / Sol
+  ├── escalation-reviewer / Astra (conditional)
+  └── security-auditor / Sol
 ```
 
-The intent is to use **local compute** for high-volume repository reading, implementation, tests, and debugging, and **frontier models** for orchestration, architecture, review, and high-value judgment.
+The intent is to use **local compute** for high-volume repository reading, implementation, tests, and debugging, and **Sol** for orchestration, architecture, and routine review, with Astra reserved for triggered escalation.
 
 | Agent | Mode | Model | Edits? |
 |---|---|---|---|
 | [chief](opencode-agents/chief.md) | primary | `openai/gpt-5.6-sol` | No — coordinates + verifies |
 | [architect](opencode-agents/architect.md) | subagent | `openai/gpt-5.6-sol` | No — plan only |
-| [implementer](opencode-agents/implementer.md) | subagent | `ollama/devstral:24b` | Yes |
-| [debugger](opencode-agents/debugger.md) | subagent | `ollama/devstral:24b` | Yes |
-| [test-writer](opencode-agents/test-writer.md) | subagent | `ollama/devstral:24b` | Tests only |
-| [docs-writer](opencode-agents/docs-writer.md) | subagent | `ollama/devstral:24b` | Docs only |
+| [implementer](opencode-agents/implementer.md) | subagent | `ollama/qwen3-coder:30b` | Yes |
+| [debugger](opencode-agents/debugger.md) | subagent | `ollama/qwen3-coder:30b` | Yes |
+| [test-writer](opencode-agents/test-writer.md) | subagent | `ollama/qwen3-coder:30b` | Tests only |
+| [docs-writer](opencode-agents/docs-writer.md) | subagent | `ollama/qwen3-coder:30b` | Docs only |
 | [code-reviewer](opencode-agents/code-reviewer.md) | subagent | `openai/gpt-5.6-sol` | No — reports only |
+| [escalation-reviewer](opencode-agents/escalation-reviewer.md) | subagent | `openai/gpt-6-astra` | No — reports only |
+| [local-explorer](opencode-agents/local-explorer.md) | subagent | `ollama/qwen3-coder:30b` | No — reports only |
 | [security-auditor](opencode-agents/security-auditor.md) | subagent | `openai/gpt-5.6-sol` | No — reports only |
 
 Install:
@@ -260,12 +287,12 @@ That symlinks [`opencode-agents/*.md`](./opencode-agents) into `~/.config/openco
 
 ### Models and providers
 
-This repo does **not** ship API keys or an `opencode.json`. Configure providers in OpenCode as you normally would:
+This repo does **not** ship API keys or an `opencode.json`. Configure providers in OpenCode as you normally would. A malformed host config prevents native agent loading even when these files parse; validate with `opencode agent list`:
 
-- **Frontier model** `openai/gpt-5.6-sol` requires your usual OpenCode OpenAI (or compatible) provider configuration. Change the `model:` frontmatter if your provider exposes a different id.
-- **Local model** `ollama/devstral:24b` expects [Ollama](https://ollama.com) at the normal local endpoint (`http://localhost:11434`). Pull and serve `devstral:24b` before using the local roles.
+- **Frontier models** `openai/gpt-5.6-sol` and `openai/gpt-6-astra` require your usual OpenCode OpenAI (or compatible) provider configuration. The Astra reviewer runs only when routed by the chief. Change `model:` if your provider exposes a different id.
+- **Local model** `ollama/qwen3-coder:30b` expects [Ollama](https://ollama.com) at the normal local endpoint (`http://localhost:11434`). Pull and serve `qwen3-coder:30b` before using the local roles.
 
-OpenCode also ships a built-in read-only `explore` subagent. This roster does not replace it; `chief` may invoke it for scouting. To run `explore` on the local model as well, pin it in your own OpenCode config rather than adding a duplicate agent here.
+OpenCode also ships a built-in read-only `explore` subagent. Use `local-explorer` when local-model reconnaissance is appropriate; the built-in remains available.
 
 ## Adding a new agent
 
